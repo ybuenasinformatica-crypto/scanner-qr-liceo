@@ -212,7 +212,8 @@
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/a/macros/snaeduca.cl/s/AKfycbwQOGCzdQcUCPuCL9lizzi0H3qvJfa0zYS_hwScC41u7BqF9hbNFMg_e56Fvm1ZgcvE/exec";
-
+    const VERSION_PRUEBA = "VERSION-JSONP-01";
+    
     let audioContext = null;
     let audioHabilitado = false;
 
@@ -522,6 +523,7 @@
     });
 
     window.onload = () => {
+      document.getElementById("debug").innerHTML = "Versión cargada: " + VERSION_PRUEBA;
       actualizarModo();
       setEstadoCamara("Cámara detenida");
       document.getElementById("idManual").focus();
