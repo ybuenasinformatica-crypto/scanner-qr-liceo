@@ -211,8 +211,7 @@
   </div>
 
   <script>
-    // Pega aquí tu URL ACTUAL de Apps Script
-    const APPS_SCRIPT_URL = "https://script.google.com/a/macros/snaeduca.cl/s/AKfycbz5QP5NVUKRxrkQb7osShQ-_nCdghs6uVN9H8wfCRjH3k0l75ax35B9-5VLWMxy7X-s/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/a/macros/snaeduca.cl/s/AKfycbwQOGCzdQcUCPuCL9lizzi0H3qvJfa0zYS_hwScC41u7BqF9hbNFMg_e56Fvm1ZgcvE/exec";
 
     let audioContext = null;
     let audioHabilitado = false;
@@ -351,34 +350,49 @@
       `;
     }
 
-    async function enviarRegistro(idAlumno) {
+    function enviarRegistro(idAlumno) {
       const tipo = document.getElementById("tipo").value;
-
       mostrar("Guardando registro...", "info");
 
-      const resp = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify({
-          idAlumno,
-          tipo,
-          observacion: ""
-        })
+      const callbackName = "jsonpCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+
+      const params = new URLSearchParams({
+        api: "registrar",
+        idAlumno: idAlumno,
+        tipo: tipo,
+        observacion: "",
+        callback: callbackName
       });
 
-      const data = await resp.json();
+      const script = document.createElement("script");
 
-      if (data.ok) {
-        sonarBien();
-        mostrar("✅ " + data.mensaje, "ok");
-        actualizarUltimoRegistro(data);
-        document.getElementById("idManual").value = "";
-      } else {
+      window[callbackName] = function(data) {
+        try {
+          if (data.ok) {
+            sonarBien();
+            mostrar("✅ " + data.mensaje, "ok");
+            actualizarUltimoRegistro(data);
+            document.getElementById("idManual").value = "";
+          } else {
+            sonarMal();
+            mostrar("❌ " + data.mensaje, "error");
+          }
+        } finally {
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+      };
+
+      script.src = APPS_SCRIPT_URL + "?" + params.toString();
+
+      script.onerror = function() {
         sonarMal();
-        mostrar("❌ " + data.mensaje, "error");
-      }
+        mostrar("Error al registrar: no se pudo conectar con Apps Script.", "error");
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+
+      document.body.appendChild(script);
     }
 
     function onScanSuccess(decodedText) {
@@ -391,10 +405,7 @@
 
       if (!puedeProcesar(decodedText)) return;
 
-      enviarRegistro(idAlumno).catch(err => {
-        sonarMal();
-        mostrar("Error al registrar: " + err.message, "error");
-      });
+      enviarRegistro(idAlumno);
     }
 
     async function iniciarEscaner() {
@@ -498,10 +509,7 @@
         return;
       }
 
-      enviarRegistro(id).catch(err => {
-        sonarMal();
-        mostrar("Error al registrar: " + err.message, "error");
-      });
+      enviarRegistro(id);
     }
 
     function limpiarManual() {
