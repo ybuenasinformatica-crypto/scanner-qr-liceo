@@ -90,9 +90,13 @@
       color: white;
     }
 
-    .grid-3, .grid-2 {
+    .grid-4, .grid-3, .grid-2 {
       display: grid;
       gap: 10px;
+    }
+
+    .grid-4 {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
     }
 
     .grid-3 {
@@ -133,6 +137,7 @@
     .pill {
       display: inline-block;
       margin-top: 10px;
+      margin-right: 8px;
       padding: 6px 10px;
       border-radius: 999px;
       background: #e5e7eb;
@@ -153,8 +158,37 @@
       word-break: break-word;
     }
 
+    .footer-info {
+      font-size: 12px;
+      color: gray;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .footer-title {
+      font-size: 13px;
+      color: #4b5563;
+      text-align: center;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    .footer-dev {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: #9ca3af;
+      text-align: center;
+      margin-top: 4px;
+    }
+
     @media (max-width: 640px) {
-      .grid-3, .grid-2 {
+      .grid-4, .grid-3, .grid-2 {
         grid-template-columns: 1fr;
       }
     }
@@ -181,9 +215,10 @@
       <option value="otro">Otro</option>
     </select>
 
-    <div class="grid-3">
+    <div class="grid-4">
       <button class="btn" onclick="iniciarEscaner()">📷 Iniciar escáner</button>
       <button class="btn-sec" onclick="pausarEscaner()">⏸️ Pausar / Reanudar</button>
+      <button class="btn-sec" onclick="cambiarCamara()">🔄 Cambiar cámara</button>
       <button class="btn-danger" onclick="detenerEscaner()">⏹️ Detener</button>
     </div>
 
@@ -192,6 +227,7 @@
     <div class="camara-box">
       <strong>Escáner QR</strong>
       <div class="pill" id="estadoCamara">Cámara detenida</div>
+      <div class="pill" id="camaraActiva">Sin cámara activa</div>
       <div id="reader"></div>
     </div>
 
@@ -207,30 +243,26 @@
       <button class="btn-sec" onclick="limpiarManual()">Limpiar</button>
     </div>
 
-    <div id="debug"></div>
-    <div style="font-size:12px;color:gray;text-align:center;margin-top:10px;">
-Versión 1.1
-</div>
+    <div id="debug">Versión cargada: VERSION-JSONP-01</div>
 
-<div style="font-size:13px;color:#6b7280;text-align:center;margin-top:8px;">
-Sistema de registro QR desarrollado por Marcelo Vega Leiva
-</div>
-
-<div style="font-size:12px;color:#9ca3af;text-align:center;margin-top:4px;">
-© 2026 Marcelo Vega Leiva. Todos los derechos reservados.
-</div>
+    <div class="footer-info">Versión 1.1</div>
+    <div class="footer-title">Sistema de Registro QR Escolar</div>
+    <div class="footer-dev">Desarrollado por Marcelo Vega Leiva</div>
+    <div class="footer-copy">© 2026 Marcelo Vega Leiva · Todos los derechos reservados</div>
   </div>
 
   <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/a/macros/snaeduca.cl/s/AKfycby4gGakxTid_8QCkFNQvQ8prP72d5qw_vddCGee6jIacnDCag5_XcNgS52QlGaC0ag/exec";
-    const VERSION_PRUEBA = "VERSION-JSONP-01";
-    
+    const APPS_SCRIPT_URL = "PEGA_AQUI_TU_URL_NUEVA_DE_APPS_SCRIPT";
+
     let audioContext = null;
     let audioHabilitado = false;
 
     let html5QrCode = null;
     let scannerActivo = false;
     let scannerPausado = false;
+
+    let availableCameras = [];
+    let currentCameraIndex = -1;
 
     let ultimoQrLeido = "";
     let ultimoRegistroTs = 0;
@@ -266,6 +298,10 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
 
     function setEstadoCamara(texto) {
       document.getElementById("estadoCamara").textContent = texto;
+    }
+
+    function setCamaraActiva(texto) {
+      document.getElementById("camaraActiva").textContent = texto;
     }
 
     async function activarSonido() {
@@ -353,12 +389,15 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
 
     function actualizarUltimoRegistro(r) {
       document.getElementById("ultimoContenido").innerHTML = `
-        <strong>ID:</strong> ${r.alumno.id}<br>
-        <strong>Nombre:</strong> ${r.alumno.nombre}<br>
-        <strong>Curso:</strong> ${r.alumno.curso}<br>
-        <strong>Tipo:</strong> ${r.tipo}<br>
-        <strong>Hora:</strong> ${r.hora}<br>
-        <strong>Fecha:</strong> ${r.fecha}
+        <div style="font-size:28px;font-weight:bold;margin-bottom:8px;">
+          ${r.alumno.nombre}
+        </div>
+        <div style="font-size:20px;margin-bottom:8px;">
+          ${r.alumno.curso}
+        </div>
+        <div style="font-size:14px;">ID: ${r.alumno.id}</div>
+        <div style="font-size:14px;">Tipo: ${r.tipo}</div>
+        <div style="font-size:14px;">Transporte: ${r.alumno.transporte || "Sin registro"}</div>
       `;
     }
 
@@ -420,6 +459,46 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
       enviarRegistro(idAlumno);
     }
 
+    function elegirCamaraInicial(cameras) {
+      const trasera = cameras.findIndex(c =>
+        /back|rear|environment|trasera/i.test(c.label || "")
+      );
+      return trasera >= 0 ? trasera : 0;
+    }
+
+    async function iniciarConCamara(cameraIndex) {
+      if (!availableCameras.length) {
+        availableCameras = await Html5Qrcode.getCameras();
+      }
+
+      if (!availableCameras.length) {
+        throw new Error("No se encontró ninguna cámara.");
+      }
+
+      currentCameraIndex = cameraIndex;
+      const camera = availableCameras[currentCameraIndex];
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      await html5QrCode.start(
+        camera.id,
+        {
+          fps: 10,
+          qrbox: { width: 260, height: 260 }
+        },
+        onScanSuccess,
+        () => {}
+      );
+
+      scannerActivo = true;
+      scannerPausado = false;
+      setEstadoCamara("Escaneando");
+      setCamaraActiva(camera.label || `Cámara ${currentCameraIndex + 1}`);
+      mostrar("Escáner iniciado correctamente.", "ok");
+    }
+
     async function iniciarEscaner() {
       try {
         if (scannerActivo && scannerPausado && html5QrCode) {
@@ -435,35 +514,43 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
           return;
         }
 
-        html5QrCode = new Html5Qrcode("reader");
+        availableCameras = await Html5Qrcode.getCameras();
 
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras || cameras.length === 0) {
+        if (!availableCameras || !availableCameras.length) {
           mostrar("No se encontró ninguna cámara.", "error");
           return;
         }
 
-        let cameraId = cameras[0].id;
-        const trasera = cameras.find(c => /back|rear|environment|trasera/i.test(c.label || ""));
-        if (trasera) cameraId = trasera.id;
-
-        await html5QrCode.start(
-          cameraId,
-          {
-            fps: 10,
-            qrbox: { width: 260, height: 260 }
-          },
-          onScanSuccess,
-          () => {}
-        );
-
-        scannerActivo = true;
-        scannerPausado = false;
-        setEstadoCamara("Escaneando");
-        mostrar("Escáner iniciado correctamente.", "ok");
+        const startIndex = elegirCamaraInicial(availableCameras);
+        await iniciarConCamara(startIndex);
       } catch (error) {
         mostrar("No se pudo iniciar la cámara: " + error, "error");
         setEstadoCamara("Error de cámara");
+        document.getElementById("debug").innerHTML = String(error);
+      }
+    }
+
+    async function cambiarCamara() {
+      try {
+        if (!availableCameras || availableCameras.length < 2) {
+          mostrar("No hay más cámaras disponibles para alternar.", "info");
+          return;
+        }
+
+        const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
+
+        if (scannerActivo && html5QrCode) {
+          await html5QrCode.stop();
+          await html5QrCode.clear();
+          html5QrCode = null;
+          scannerActivo = false;
+          scannerPausado = false;
+          document.getElementById("reader").innerHTML = "";
+        }
+
+        await iniciarConCamara(nextIndex);
+      } catch (error) {
+        mostrar("No se pudo cambiar de cámara: " + error, "error");
         document.getElementById("debug").innerHTML = String(error);
       }
     }
@@ -495,6 +582,7 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
       try {
         if (!scannerActivo || !html5QrCode) {
           setEstadoCamara("Cámara detenida");
+          setCamaraActiva("Sin cámara activa");
           return;
         }
 
@@ -507,6 +595,7 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
         document.getElementById("reader").innerHTML = "";
 
         setEstadoCamara("Cámara detenida");
+        setCamaraActiva("Sin cámara activa");
         mostrar("Escáner detenido.", "info");
       } catch (error) {
         mostrar("No se pudo detener el escáner: " + error, "error");
@@ -534,9 +623,9 @@ Sistema de registro QR desarrollado por Marcelo Vega Leiva
     });
 
     window.onload = () => {
-      document.getElementById("debug").innerHTML = "Versión cargada: " + VERSION_PRUEBA;
       actualizarModo();
       setEstadoCamara("Cámara detenida");
+      setCamaraActiva("Sin cámara activa");
       document.getElementById("idManual").focus();
     };
   </script>
