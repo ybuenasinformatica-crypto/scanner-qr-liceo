@@ -419,14 +419,16 @@
       window[callbackName] = function(data) {
         try {
           if (data.ok) {
-            sonarBien();
-            mostrar("✅ " + data.mensaje, "ok");
-            actualizarUltimoRegistro(data);
-            document.getElementById("idManual").value = "";
-          } else {
-            sonarMal();
-            mostrar("❌ " + data.mensaje, "error");
-          }
+  sonarBien();
+  mostrar("✅ " + data.mensaje, "ok");
+  actualizarUltimoRegistro(data);
+} else {
+  sonarMal();
+  mostrar("❌ " + data.mensaje, "error");
+}
+
+document.getElementById("idManual").value = "";
+document.getElementById("idManual").focus();
         } finally {
           delete window[callbackName];
           if (script.parentNode) script.parentNode.removeChild(script);
@@ -602,15 +604,22 @@
     }
 
     function registrarManual() {
-      const id = document.getElementById("idManual").value.trim().toUpperCase();
-      if (!id) {
-        sonarMal();
-        mostrar("Ingresa un ID.", "error");
-        return;
-      }
+  const campo = document.getElementById("idManual");
+  const id = campo.value.trim().toUpperCase();
 
-      enviarRegistro(id);
-    }
+  if (!id) {
+    sonarMal();
+    mostrar("Ingresa un ID.", "error");
+    campo.focus();
+    return;
+  }
+
+  // Limpiar INMEDIATAMENTE antes de enviar
+  campo.value = "";
+  campo.focus();
+
+  enviarRegistro(id);
+}
 
     function limpiarManual() {
       document.getElementById("idManual").value = "";
