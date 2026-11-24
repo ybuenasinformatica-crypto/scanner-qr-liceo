@@ -52,6 +52,7 @@
     .modo-transporte_tarde { background:#fdf2f8; color:#be185d; }
     .modo-asistencia,
     .modo-ingreso,
+    .modo-cit { background: #e0f2fe; color: #075985;}
     .modo-biblioteca,
     .modo-otro { background:#f9fafb; color:#111827; }
 
@@ -212,6 +213,7 @@
       <option value="asistencia">Asistencia</option>
       <option value="ingreso">Ingreso</option>
       <option value="biblioteca">Biblioteca</option>
+      <option value="biblioteca">CIT</option>
       <option value="otro">Otro</option>
     </select>
 
@@ -276,6 +278,7 @@
         transporte_tarde: 'TRANSPORTE TARDE',
         asistencia: 'ASISTENCIA',
         ingreso: 'INGRESO',
+        cit: 'INGRESO AL CIT',
         biblioteca: 'BIBLIOTECA',
         otro: 'OTRO'
       }[tipo] || tipo;
